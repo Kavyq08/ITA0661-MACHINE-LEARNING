@@ -1,0 +1,79 @@
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+data = load_iris()
+X = data.data
+y = data.target
+
+y_one_hot = np.zeros((y.size, y.max() + 1))
+y_one_hot[np.arange(y.size), y] = 1
+
+X_train, X_test, y_train, y_test = train_test_split(X, y_one_hot, test_size=0.3, random_state=42)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+input_layer_size = X_train.shape[1]
+hidden_layer_size = 5
+output_layer_size = y_train.shape[1]
+
+np.random.seed(42)
+W1 = np.random.randn(input_layer_size, hidden_layer_size)
+b1 = np.zeros((1, hidden_layer_size))
+W2 = np.random.randn(hidden_layer_size, output_layer_size)
+b2 = np.zeros((1, output_layer_size))
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+def forward_pass(X):
+    Z1 = np.dot(X, W1) + b1
+    A1 = sigmoid(Z1)
+    Z2 = np.dot(A1, W2) + b2
+    A2 = sigmoid(Z2)
+    return A1, A2
+
+def backward_pass(X, y, A1, A2):
+    m = X.shape[0]
+    loss = (1 / m) * np.sum(-y * np.log(A2) - (1 - y) * np.log(1 - A2))
+    dA2 = A2 - y
+    dZ2 = dA2 * sigmoid_derivative(A2)
+    dW2 = (1 / m) * np.dot(A1.T, dZ2)
+    db2 = (1 / m) * np.sum(dZ2, axis=0, keepdims=True)
+    dA1 = np.dot(dZ2, W2.T)
+    dZ1 = dA1 * sigmoid_derivative(A1)
+    dW1 = (1 / m) * np.dot(X.T, dZ1)
+    db1 = (1 / m) * np.sum(dZ1, axis=0, keepdims=True)
+    return loss, dW1, db1, dW2, db2
+
+def update_weights(W1, b1, W2, b2, dW1, db1, dW2, db2, learning_rate=0.01):
+    W1 -= learning_rate * dW1
+    b1 -= learning_rate * db1
+    W2 -= learning_rate * dW2
+    b2 -= learning_rate * db2
+    return W1, b1, W2, b2
+
+epochs = 1000
+learning_rate = 0.01
+for epoch in range(epochs):
+    A1, A2 = forward_pass(X_train)
+    loss, dW1, db1, dW2, db2 = backward_pass(X_train, y_train, A1, A2)
+    W1, b1, W2, b2 = update_weights(W1, b1, W2, b2, dW1, db1, dW2, db2, learning_rate)
+    if epoch % 100 == 0:
+        print(f"Epoch {epoch}, Loss: {loss}")
+
+def predict(X):
+    _, A2 = forward_pass(X)
+    return np.argmax(A2, axis=1)
+
+y_pred = predict(X_test)
+y_test_labels = np.argmax(y_test, axis=1)
+
+accuracy = np.mean(y_pred == y_test_labels)
+print(f"Accuracy: {accuracy * 100}%")
