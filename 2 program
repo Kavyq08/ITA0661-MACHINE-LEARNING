@@ -1,0 +1,101 @@
+import math
+from collections import Counter
+
+# Function to calculate entropy
+def entropy(data):
+    total = len(data)
+    class_counts = Counter([item[-1] for item in data])
+    ent = 0
+    for count in class_counts.values():
+        prob = count / total
+        ent -= prob * math.log2(prob)
+    return ent
+
+# Function to calculate information gain
+def information_gain(data, attribute_index):
+    total_entropy = entropy(data)
+    
+    # Group the data by the values of the attribute
+    subsets = {}
+    for row in data:
+        key = row[attribute_index]
+        if key not in subsets:
+            subsets[key] = []
+        subsets[key].append(row)
+    
+    # Calculate the weighted entropy for each subset
+    weighted_entropy = 0
+    for subset in subsets.values():
+        weighted_entropy += (len(subset) / len(data)) * entropy(subset)
+    
+    return total_entropy - weighted_entropy
+
+# Function to select the best attribute
+def best_attribute(data, attributes):
+    gains = [information_gain(data, i) for i in range(len(attributes))]
+    return gains.index(max(gains))
+
+# Function to build the decision tree
+def id3(data, attributes):
+    class_values = set([row[-1] for row in data])
+    
+    # If all the samples have the same class, return that class
+    if len(class_values) == 1:
+        return list(class_values)[0]
+    
+    # If there are no attributes left to split on, return the majority class
+    if len(attributes) == 0:
+        return Counter([row[-1] for row in data]).most_common(1)[0][0]
+    
+    # Select the best attribute
+    best_attr_index = best_attribute(data, attributes)
+    best_attr = attributes[best_attr_index]
+    
+    tree = {best_attr: {}}
+    
+    # Split the dataset by the selected attribute
+    subsets = {}
+    for row in data:
+        key = row[best_attr_index]
+        if key not in subsets:
+            subsets[key] = []
+        subsets[key].append(row)
+    
+    # Recursively build the tree for each subset
+    for value, subset in subsets.items():
+        new_attributes = attributes[:best_attr_index] + attributes[best_attr_index + 1:]
+        tree[best_attr][value] = id3(subset, new_attributes)
+    
+    return tree
+
+# Training data (Outlook, Temperature, Humidity, Wind, PlayTennis)
+data = [
+    ['Sunny', 'Hot', 'High', 'Weak', 'No'],
+    ['Sunny', 'Hot', 'High', 'Strong', 'No'],
+    ['Overcast', 'Hot', 'High', 'Weak', 'Yes'],
+    ['Rainy', 'Mild', 'High', 'Weak', 'Yes'],
+    ['Rainy', 'Cool', 'Normal', 'Weak', 'Yes'],
+    ['Overcast', 'Mild', 'High', 'Strong', 'Yes'],
+    ['Sunny', 'Mild', 'High', 'Weak', 'No']
+]
+
+# Attribute names (for display purposes)
+attributes = ['Outlook', 'Temperature', 'Humidity', 'Wind']
+
+# Build the decision tree
+tree = id3(data, attributes)
+print("Decision Tree:")
+print(tree)
+
+# Example classification of a new sample
+new_sample = ['Sunny', 'Cool', 'High', 'Weak']
+def classify(tree, sample):
+    if isinstance(tree, str):
+        return tree
+    root_attribute = list(tree.keys())[0]
+    attribute_value = sample[attributes.index(root_attribute)]
+    return classify(tree[root_attribute].get(attribute_value, "Unknown"), sample)
+
+# Classify the new sample
+result = classify(tree, new_sample)
+print(f"The classification for the new sample is: {result}")
