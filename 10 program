@@ -1,0 +1,67 @@
+import numpy as np
+from scipy.stats import multivariate_normal
+
+class EM:
+    def __init__(self, k=2, max_iters=100, tol=1e-6):
+        self.k = k
+        self.max_iters = max_iters
+        self.tol = tol
+
+    def fit(self, X):
+        n_samples, n_features = X.shape
+        self.means = np.random.rand(self.k, n_features)
+        self.covariances = np.array([np.identity(n_features)] * self.k)
+        self.weights = np.ones(self.k) / self.k
+
+        log_likelihood_old = 0
+
+        for _ in range(self.max_iters):
+            responsibilities = self.e_step(X)
+            self.m_step(X, responsibilities)
+
+            log_likelihood_new = self.compute_log_likelihood(X)
+            if np.abs(log_likelihood_new - log_likelihood_old) < self.tol:
+                break
+            log_likelihood_old = log_likelihood_new
+
+    def e_step(self, X):
+        n_samples = X.shape[0]
+        responsibilities = np.zeros((n_samples, self.k))
+
+        for i in range(self.k):
+            responsibilities[:, i] = self.weights[i] * multivariate_normal.pdf(X, mean=self.means[i], cov=self.covariances[i])
+
+        responsibilities /= responsibilities.sum(axis=1)[:, np.newaxis]
+        return responsibilities
+
+    def m_step(self, X, responsibilities):
+        n_samples, n_features = X.shape
+        for i in range(self.k):
+            weight = responsibilities[:, i].sum()
+            self.weights[i] = weight / n_samples
+            self.means[i] = (responsibilities[:, i][:, np.newaxis] * X).sum(axis=0) / weight
+            diff = X - self.means[i]
+            self.covariances[i] = np.dot((responsibilities[:, i][:, np.newaxis] * diff).T, diff) / weight
+
+    def compute_log_likelihood(self, X):
+        log_likelihood = 0
+        for i in range(self.k):
+            log_likelihood += self.weights[i] * multivariate_normal.pdf(X, mean=self.means[i], cov=self.covariances[i])
+        return np.sum(np.log(log_likelihood))
+
+    def predict(self, X):
+        responsibilities = self.e_step(X)
+        return np.argmax(responsibilities, axis=1)
+
+from sklearn.datasets import make_blobs
+import matplotlib.pyplot as plt
+
+X, _ = make_blobs(n_samples=500, centers=2, random_state=42)
+
+em = EM(k=2)
+em.fit(X)
+
+y_pred = em.predict(X)
+
+plt.scatter(X[:, 0], X[:, 1], c=y_pred, cmap='viridis')
+plt.show()
