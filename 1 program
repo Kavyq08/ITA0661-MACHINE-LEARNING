@@ -1,0 +1,27 @@
+def find_s_algorithm(training_data):
+    # Step 1: Initialize the hypothesis to be the first positive example
+    hypothesis = training_data[0][:4]  # Exclude the 'PlayTennis' class
+    print(f"Initial Hypothesis: {hypothesis}")
+
+    # Step 2: For each positive example, refine the hypothesis
+    for example in training_data:
+        if example[-1] == 'Yes':  # Only consider positive examples
+            for i in range(len(hypothesis)):
+                if hypothesis[i] != example[i] and hypothesis[i] != '?':
+                    hypothesis[i] = '?'  # Generalize if different attribute values
+    return hypothesis
+
+# Training data with (Outlook, Temperature, Humidity, Wind, PlayTennis)
+training_data = [
+    ['Sunny', 'Hot', 'High', 'Weak', 'No'],
+    ['Sunny', 'Hot', 'High', 'Strong', 'No'],
+    ['Overcast', 'Hot', 'High', 'Weak', 'Yes'],
+    ['Rainy', 'Mild', 'High', 'Weak', 'Yes'],
+    ['Rainy', 'Cool', 'Normal', 'Weak', 'Yes'],
+    ['Overcast', 'Mild', 'High', 'Strong', 'Yes'],
+    ['Sunny', 'Mild', 'High', 'Weak', 'No']
+]
+
+# Apply FIND-S algorithm
+hypothesis = find_s_algorithm(training_data)
+print(f"Final Most Specific Hypothesis: {hypothesis}")
