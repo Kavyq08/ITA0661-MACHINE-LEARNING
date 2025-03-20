@@ -1,0 +1,45 @@
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_iris
+from sklearn.metrics import accuracy_score
+
+class LogisticRegression:
+    def __init__(self, learning_rate=0.01, epochs=1000):
+        self.learning_rate = learning_rate
+        self.epochs = epochs
+        self.weights = None
+        self.bias = None
+
+    def fit(self, X_train, y_train):
+        m, n = X_train.shape
+        self.weights = np.zeros(n)
+        self.bias = 0
+
+        for _ in range(self.epochs):
+            model = np.dot(X_train, self.weights) + self.bias
+            predictions = self._sigmoid(model)
+            dw = (1 / m) * np.dot(X_train.T, (predictions - y_train))
+            db = (1 / m) * np.sum(predictions - y_train)
+            self.weights -= self.learning_rate * dw
+            self.bias -= self.learning_rate * db
+
+    def predict(self, X_test):
+        model = np.dot(X_test, self.weights) + self.bias
+        predictions = self._sigmoid(model)
+        return [1 if p >= 0.5 else 0 for p in predictions]
+
+    def _sigmoid(self, z):
+        return 1 / (1 + np.exp(-z))
+
+data = load_iris()
+X = data.data
+y = (data.target == 0).astype(int)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+lr = LogisticRegression(learning_rate=0.01, epochs=1000)
+lr.fit(X_train, y_train)
+y_pred = lr.predict(X_test)
+
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy}")
